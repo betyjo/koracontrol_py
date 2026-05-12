@@ -1,12 +1,18 @@
 import uuid
+import requests
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QInputDialog
+from PyQt6.QtWidgets import QMenu, QInputDialog
 
 class DraggableComponent(QLabel):
     def __init__(self, comp_type, off_img, on_img, parent=None):
         super().__init__(parent)
+        
+        self.tag = ""
+        self.linked_tag = ""
+        self.state = False
 
         self.id = str(uuid.uuid4())
         self.type = comp_type
@@ -40,8 +46,15 @@ class DraggableComponent(QLabel):
         self.state = not self.state
         self.update_image()
 
-        if self.parent():
-            self.parent().update_tag(self)
+    # 🔥 SEND TO BACKEND
+        if self.tag:
+         requests.post(
+            "http://127.0.0.1:8000/set_tag",
+            json={
+                "tag": self.tag,
+                "value": self.state
+            }
+        )
 
     def update_image(self):
         if self.state:
@@ -66,3 +79,43 @@ class DraggableComponent(QLabel):
         if ok and tag:
             self.set_tag(tag)
             print(f"{self.type} assigned tag: {tag}")
+    
+
+    def contextMenuEvent(self, event):
+
+        menu = QMenu(self)
+
+        set_tag_action = menu.addAction("Set Tag")
+        set_link_action = menu.addAction("Set Linked Tank")
+
+        action = menu.exec(event.globalPos())
+
+        # -----------------------
+        # SET DEVICE TAG
+        # -----------------------
+
+        if action == set_tag_action:
+            text, ok = QInputDialog.getText(
+                self,
+                "Set Tag",
+                "Enter tag:"
+            )
+
+            if ok:
+                self.tag = text
+                print("TAG:", self.tag)
+
+        # -----------------------
+        # SET LINKED DEVICE
+        # -----------------------
+
+        elif action == set_link_action:
+            text, ok = QInputDialog.getText(
+                self,
+                "Set Linked Tank",
+                "Enter linked tank tag:"
+            )
+
+            if ok:
+                self.linked_tag = text
+                print("LINK:", self.linked_tag)
